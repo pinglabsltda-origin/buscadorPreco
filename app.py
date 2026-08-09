@@ -93,29 +93,26 @@ def get_chrome_profile_path():
 
 
 def get_temp_profile_path():
-    """Cria uma cópia temporária do perfil do Chrome para não conflitar com o Chrome aberto."""
-    original = get_chrome_profile_path()
-    if not original:
-        return None
-
-    # Diretório temporário dentro do projeto
+    """Cria/usa uma cópia temporária do perfil do Chrome para não conflitar com o Chrome aberto, preservando logins."""
+    # Diretório persistente local do projeto para salvar os logins
     temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".chrome_profile_temp")
-
-    # Copiar apenas os arquivos essenciais (cookies, login, etc)
-    essential_files = ["Default", "Local State", "Profile 1"]
     os.makedirs(temp_dir, exist_ok=True)
 
-    for item in essential_files:
-        src = os.path.join(original, item)
-        dst = os.path.join(temp_dir, item)
-        if os.path.exists(src) and not os.path.exists(dst):
-            try:
-                if os.path.isdir(src):
-                    shutil.copytree(src, dst, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(src, dst)
-            except Exception:
-                pass
+    original = get_chrome_profile_path()
+    if original and not os.path.exists(os.path.join(temp_dir, "Default")):
+        # Copiar apenas os arquivos essenciais na primeira vez
+        essential_files = ["Default", "Local State", "Profile 1"]
+        for item in essential_files:
+            src = os.path.join(original, item)
+            dst = os.path.join(temp_dir, item)
+            if os.path.exists(src) and not os.path.exists(dst):
+                try:
+                    if os.path.isdir(src):
+                        shutil.copytree(src, dst, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(src, dst)
+                except Exception:
+                    pass
     return temp_dir
 
 
@@ -210,6 +207,9 @@ class EcommerceScraperApp:
         self.stop_btn = ttk.Button(btn_frame, text="⏹️ Parar", command=self.stop_scraping, state=tk.DISABLED)
         self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
 
+        self.login_btn = ttk.Button(btn_frame, text="🔑 Fazer Login no Navegador", command=self.open_login_browser)
+        self.login_btn.pack(side=tk.LEFT, padx=(0, 10))
+
         self.export_csv_btn = ttk.Button(btn_frame, text="💾 Exportar CSV", command=self.export_csv, state=tk.DISABLED)
         self.export_csv_btn.pack(side=tk.RIGHT, padx=(5, 0))
 
@@ -246,6 +246,47 @@ class EcommerceScraperApp:
         self.status_var = tk.StringVar(value="Pronto. Configure e clique em Iniciar.")
         status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor="w", padding=5)
         status_bar.pack(fill=tk.X, side=tk.BOTTOM)
+
+    def open_login_browser(self):
+        """Abre o navegador visível apenas para o usuário logar nas contas (Shopee, Amazon, etc)."""
+        self.status_var.set("Abrindo navegador para login. Feche-o quando terminar.")
+        self.start_btn.config(state=tk.DISABLED)
+        self.login_btn.config(state=tk.DISABLED)
+
+        def run_login():
+            try:
+                with sync_playwright() as p:
+                    profile_path = get_temp_profile_path()
+                    context = p.chromium.launch_persistent_context(
+                        profile_path,
+                        channel="chrome",
+                        headless=False,  # Sempre visível para login
+                        locale="pt-BR",
+                        timezone_id="America/Sao_Paulo",
+                        color_scheme="light",
+                        args=[
+                            "--disable-blink-features=AutomationControlled",
+                            "--disable-infobars",
+                        ],
+                    )
+                    page = context.pages[0] if context.pages else context.new_page()
+                    page.goto("https://www.google.com")
+                    
+                    # Fica aguardando o usuário fechar o navegador manualmente
+                    try:
+                        page.wait_for_event("close", timeout=0)
+                    except Exception:
+                        pass
+                    
+                    context.close()
+            except Exception as e:
+                pass
+            finally:
+                self.root.after(0, lambda: self.status_var.set("Navegador fechado. Pronto para extrair."))
+                self.root.after(0, lambda: self.start_btn.config(state=tk.NORMAL))
+                self.root.after(0, lambda: self.login_btn.config(state=tk.NORMAL))
+
+        threading.Thread(target=run_login, daemon=True).start()
 
     def _set_preset(self, url_pattern):
         self.url_pattern_entry.delete(0, tk.END)
@@ -301,7 +342,7 @@ class EcommerceScraperApp:
                 profile_path = get_temp_profile_path()
 
                 if profile_path:
-                    self.status_var.set("Abrindo Chrome com seu perfil real...")
+                    self.status_var.set("Abrindo Chrome com seu perfil...")
                     context = p.chromium.launch_persistent_context(
                         profile_path,
                         channel="chrome",
@@ -315,7 +356,7 @@ class EcommerceScraperApp:
                         ],
                     )
                 else:
-                    self.status_var.set("Perfil do Chrome não encontrado, abrindo novo...")
+                    self.status_var.set("Perfil não encontrado, executando em modo limpo...")
                     context = p.chromium.launch_persistent_context(
                         "",
                         channel="chrome",
