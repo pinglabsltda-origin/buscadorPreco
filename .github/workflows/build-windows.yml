@@ -1,0 +1,33 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências
+        run: |
+          pip install playwright pyinstaller
+          playwright install chromium
+
+      - name: Compilar executável
+        run: |
+          pyinstaller --noconsole --onefile --name "PesquisaProdutos" app.py
+
+      - name: Upload do executável
+        uses: actions/upload-artifact@v4
+        with:
+          name: PesquisaProdutos-Windows
+          path: dist/PesquisaProdutos.exe

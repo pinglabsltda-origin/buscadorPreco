@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - bicicleta exercicios</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:#0f0f1a; color:#e0e0e0; min-height:100vh; }
+.header { background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); padding:40px 50px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.header h1 { font-size:28px; font-weight:700; background:linear-gradient(90deg,#e2e8f0,#94a3b8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:6px; }
+.header p { color:#64748b; font-size:14px; }
+.container { max-width:1400px; margin:0 auto; padding:30px 50px; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; margin-bottom:35px; }
+.stat-card { background:linear-gradient(145deg,#1a1a2e,#1e1e35); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:28px; transition:transform .2s,box-shadow .2s; }
+.stat-card:hover { transform:translateY(-4px); box-shadow:0 8px 30px rgba(0,0,0,0.3); }
+.stat-card .label { font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:#64748b; margin-bottom:10px; }
+.stat-card .value { font-size:32px; font-weight:700; }
+.stat-card:nth-child(1) .value { color:#60a5fa; }
+.stat-card:nth-child(2) .value { color:#34d399; }
+.stat-card:nth-child(3) .value { color:#fbbf24; }
+.stat-card:nth-child(4) .value { color:#f472b6; }
+.section { background:linear-gradient(145deg,#1a1a2e,#1e1e35); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:30px; margin-bottom:35px; }
+.section h2 { font-size:18px; font-weight:600; color:#cbd5e1; margin-bottom:20px; }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; padding:14px 16px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#64748b; border-bottom:1px solid rgba(255,255,255,0.08); }
+td { padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:14px; }
+td a { color:#93c5fd; text-decoration:none; transition:color .2s; }
+td a:hover { color:#60a5fa; text-decoration:underline; }
+td.price { color:#34d399; font-weight:600; white-space:nowrap; }
+tr:hover { background:rgba(255,255,255,0.02); }
+.footer { text-align:center; padding:30px; color:#475569; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>📊 Dashboard: bicicleta exercicios</h1>
+    <p>Gerado em 09/08/2026 às 15:50 &mdash; 15 produtos encontrados</p>
+</div>
+<div class="container">
+    <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total de Produtos</div><div class="value">15</div></div>
+        <div class="stat-card"><div class="label">Preço Médio</div><div class="value">R$ 466.75</div></div>
+        <div class="stat-card"><div class="label">Menor Preço</div><div class="value">R$ 109.15</div></div>
+        <div class="stat-card"><div class="label">Maior Preço</div><div class="value">R$ 987.61</div></div>
+    </div>
+    <div class="section">
+        <h2>Comparativo de Preços</h2>
+        <canvas id="priceChart" height="100"></canvas>
+    </div>
+    <div class="section">
+        <h2>Todos os Produtos</h2>
+        <table>
+            <thead><tr><th>#</th><th>Produto</th><th>Preço</th></tr></thead>
+            <tbody>
+            <tr>
+                <td>1</td>
+                <td><a href="#" target="_blank">Bicicleta Ergométrica Bike Spinning – Bike Treino em Casa, Academia, Exercícios </a></td>
+                <td class="price">R$ 493,05</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><a href="#" target="_blank">Bicicleta Ergometrica Spinning Movick Azul Transmissao por Correia Silenciosa Vo</a></td>
+                <td class="price">R$ 987,61</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><a href="#" target="_blank">Bicicleta Ergométrica Bike Spinning – Bike Treino em Casa, Academia, Exercícios </a></td>
+                <td class="price">R$ 607,90</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><a href="#" target="_blank">Bicicleta Ergométrica Bike Spinning Bike Treino em Casa Academia Exercícios Card</a></td>
+                <td class="price">R$ 451,25</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><a href="https://www.amazon.com.br/Bicicleta-Ergom%C3%A9trica-Silenciosa-Confort%C3%A1vel-Emagrecimento/dp/B0GLR43HBC/ref=sr_1_5?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-5&ufe=app_do%3Aamzn1.fos.e05b01e0-91a7-477e-a514-15a32325a6d6" target="_blank">Bicicleta Ergométrica Bike Spinning para Treino em Casa e Academia, Silenciosa, </a></td>
+                <td class="price">R$ 415,05</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td><a href="https://www.amazon.com.br/Ergom%C3%A9trica-Exerc%C3%ADcios-Emagrecimento-Confort%C3%A1vel-Silenciosa/dp/B0GG4WYRNM/ref=sr_1_6?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-6&ufe=app_do%3Aamzn1.fos.4bddec23-2dcf-4403-8597-e1a02442043d" target="_blank">Bicicleta Ergométrica Bike Spinning Bike Treino em Casa Academia Exercícios Card</a></td>
+                <td class="price">R$ 451,25</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td><a href="https://www.amazon.com.br/Ergometrica-Bicicleta-Spinning-Silenciosa-Vertical/dp/B0FTNWV5F9/ref=sr_1_7?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-7&ufe=app_do%3Aamzn1.fos.4bddec23-2dcf-4403-8597-e1a02442043d" target="_blank">Bike Ergometrica Bicicleta Ergometrica Bike Spinning Silenciosa Vertical Modelo </a></td>
+                <td class="price">R$ 419,05</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td><a href="https://www.amazon.com.br/Ciclo-Bicicleta-Ergometrica-Portatil-Dobrave/dp/B0DBQZCC2P/ref=sr_1_8?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-8&ufe=app_do%3Aamzn1.fos.6a09f7ec-d911-4889-ad70-de8dd83c8a74" target="_blank">Mini Bicicleta Ergométrica Portátil - Ciclo Bike Dobrável Com Pedal</a></td>
+                <td class="price">R$ 148,00</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td><a href="https://www.amazon.com.br/Ergom%C3%A9trica-Exerc%C3%ADcios-Emagrecimento-Confort%C3%A1vel-Silenciosa/dp/B0GSS6B8KK/ref=sr_1_9?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-9&ufe=app_do%3Aamzn1.fos.e05b01e0-91a7-477e-a514-15a32325a6d6" target="_blank">Bicicleta Ergométrica Bike Spinning Academia Fitness Exercícios Cardio e Emagrec</a></td>
+                <td class="price">R$ 417,90</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td><a href="https://www.amazon.com.br/Mini-Bicicleta-Ergom%C3%A9trica-Exerc%C3%ADcios-Fisioterapia/dp/B0CYCRL8CM/ref=sr_1_10?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-10" target="_blank">Mini Bicicleta Bike Ergométrica Para Exercícios e Fisioterapia</a></td>
+                <td class="price">N/A</td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td><a href="https://www.amazon.com.br/Bicicleta-Ergom%C3%A9trica-Port%C3%A1til-Fisioterapia-Exercicio/dp/B0G1N5D9ZG/ref=sr_1_11?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-11&ufe=app_do%3Aamzn1.fos.6121c6c4-c969-43ae-92f7-cc248fc6181d" target="_blank">Mini Bicicleta Ergométrica Portátil Fisioterapia Exercicio Idosos Braços Pernas </a></td>
+                <td class="price">R$ 109,15</td>
+            </tr>
+            <tr>
+                <td>12</td>
+                <td><a href="https://www.amazon.com.br/Bicicleta-Ergom%C3%A9trica-Spinning-Profissional-Wizo/dp/B0GNN42NBM/ref=sr_1_12?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-12&ufe=app_do%3Aamzn1.fos.95de73c3-5dda-43a7-bd1f-63af03b14751" target="_blank">Bicicleta Spinning Com Roda De Inércia De 13kg Bicicleta de Spinning Personaliza</a></td>
+                <td class="price">R$ 720,10</td>
+            </tr>
+            <tr>
+                <td>13</td>
+                <td><a href="https://www.amazon.com.br/Cicloergometro-Fisioterapia-Bicicleta-Cicloerg%C3%B4metro-Exerc%C3%ADcio/dp/B0CJ9RBDW5/ref=sr_1_13?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-13&ufe=app_do%3Aamzn1.fos.6a09f7ec-d911-4889-ad70-de8dd83c8a74" target="_blank">Galera da Bike Mini Bicicleta Estática Digital Portátil Dobrável com Contador de</a></td>
+                <td class="price">R$ 130,90</td>
+            </tr>
+            <tr>
+                <td>14</td>
+                <td><a href="https://www.amazon.com.br/Bicicleta-Ergom%C3%A9trica-KNakasaki-Academia-Silenciosa/dp/B0DMWNVJ37/ref=sr_1_14?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-14&ufe=app_do%3Aamzn1.fos.25548f35-0de7-44b3-b28e-0f56f3f96147" target="_blank">Bicicleta Ergométrica KNakasaki Bike Academia Spinning Silenciosa</a></td>
+                <td class="price">R$ 463,25</td>
+            </tr>
+            <tr>
+                <td>15</td>
+                <td><a href="https://www.amazon.com.br/Bicicleta-Spinning-Personalizada-Ciclismo-Silenciosa/dp/B0H37T4V6Q/ref=sr_1_15?dib=eyJ2IjoiMSJ9.aic3mZnxlH3Ir0NobE0hpCyh65ZvTFG1_Ucp_S4hdJ2AsLG-Zrfrl4ujNuZC8yl5q6d7TcivcC5oSDCpD9kIbiGsHw3-BW511JFSby_v19hth7AP5bw1TTaNPp5ludGTnRlBW_00_HbTJxD1bduOEHZ4RCM7nuRaR7bNgo1ZLFm3faizkK7Fwe9Gdpw39tgTRsFtiUS05cPDU711hOboasrvBaRkUhfAdf6ikJIKtxWuLz3nT4LKCSqNNb55v7it7A81FX2B7mo1xST32_TK7rnQf064CLRtvEqkIxryEMY.tJBS8gdqF4VxfKIOM1yoAcZIt2ZVGRfW5THYq-xR-mM&dib_tag=se&keywords=bicicleta+exerc%C3%ADcios&qid=1786305003&sr=8-15&ufe=app_do%3Aamzn1.fos.95de73c3-5dda-43a7-bd1f-63af03b14751" target="_blank">Bicicleta Spinning Com Roda De Inércia De 13kg Bicicleta de Spinning Personaliza</a></td>
+                <td class="price">R$ 720,10</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="footer">Pesquisa Inteligente de Produtos &mdash; Dashboard gerado automaticamente</div>
+<script>
+const ctx = document.getElementById('priceChart').getContext('2d');
+new Chart(ctx, {
+    type:'bar',
+    data:{
+        labels:["Bicicleta Ergométrica Bike Spi...", "Bicicleta Ergometrica Spinning...", "Bicicleta Ergométrica Bike Spi...", "Bicicleta Ergométrica Bike Spi...", "Bicicleta Ergométrica Bike Spi...", "Bicicleta Ergométrica Bike Spi...", "Bike Ergometrica Bicicleta Erg...", "Mini Bicicleta Ergométrica Por...", "Bicicleta Ergométrica Bike Spi...", "Mini Bicicleta Ergométrica Por...", "Bicicleta Spinning Com Roda De...", "Galera da Bike Mini Bicicleta ...", "Bicicleta Ergométrica KNakasak...", "Bicicleta Spinning Com Roda De..."],
+        datasets:[{
+            label:'Preço (R$)',
+            data:[493.05, 987.61, 607.9, 451.25, 415.05, 451.25, 419.05, 148.0, 417.9, 109.15, 720.1, 130.9, 463.25, 720.1],
+            backgroundColor:'rgba(96,165,250,0.6)',
+            borderColor:'rgba(96,165,250,1)',
+            borderWidth:1,
+            borderRadius:6,
+            hoverBackgroundColor:'rgba(96,165,250,0.85)'
+        }]
+    },
+    options:{
+        responsive:true,
+        plugins:{
+            legend:{display:false},
+            tooltip:{
+                backgroundColor:'#1e293b',
+                callbacks:{
+                    label:function(c){return 'R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2});}
+                }
+            }
+        },
+        scales:{
+            y:{beginAtZero:true, ticks:{color:'#64748b',callback:function(v){return 'R$ '+v.toLocaleString('pt-BR');}}, grid:{color:'rgba(255,255,255,0.04)'}},
+            x:{ticks:{color:'#64748b',maxRotation:45}, grid:{display:false}}
+        }
+    }
+});
+</script>
+</body>
+</html>
