@@ -256,9 +256,11 @@ class EcommerceScraperApp:
         def run_login():
             try:
                 sistema = platform.system()
+                profile_path = get_temp_profile_path()
                 cmd = []
                 # Flag para habilitar o controle do Playwright no navegador existente
-                flags = ["--remote-debugging-port=9222", "https://www.google.com"]
+                # Passamos o user-data-dir para forçar uma nova instância isolada que suporte a porta 9222
+                flags = ["--remote-debugging-port=9222", f"--user-data-dir={profile_path}", "https://www.google.com"]
                 
                 if sistema == "Windows":
                     cmd = ["start", "chrome"] + flags
@@ -372,7 +374,11 @@ class EcommerceScraperApp:
                             color_scheme="light",
                         )
 
-                page = context.pages[0] if context.pages else context.new_page()
+                if is_connected:
+                    # Se conectou a um Chrome aberto, abre apenas uma nova guia
+                    page = context.new_page()
+                else:
+                    page = context.pages[0] if context.pages else context.new_page()
 
                 # ── FASE 1: Abrir página inicial (como um humano abrindo o navegador) ──
                 self.status_var.set("Navegando até a página de busca...")
