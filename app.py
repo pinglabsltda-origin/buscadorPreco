@@ -12,6 +12,8 @@ import sys
 import platform
 import shutil
 import re
+import subprocess
+import socket
 from datetime import datetime
 
 # Certifique-se de instalar as bibliotecas:
@@ -248,44 +250,36 @@ class EcommerceScraperApp:
         status_bar.pack(fill=tk.X, side=tk.BOTTOM)
 
     def open_login_browser(self):
-        """Abre o navegador visível apenas para o usuário logar nas contas (Shopee, Amazon, etc)."""
-        self.status_var.set("Abrindo navegador para login. Feche-o quando terminar.")
-        self.start_btn.config(state=tk.DISABLED)
-        self.login_btn.config(state=tk.DISABLED)
-
+        """Abre o navegador visível (e independente) habilitando a porta de debug."""
+        self.status_var.set("Abrindo navegador para login... Pode deixá-lo aberto.")
+        
         def run_login():
             try:
-                with sync_playwright() as p:
-                    profile_path = get_temp_profile_path()
-                    context = p.chromium.launch_persistent_context(
-                        profile_path,
-                        channel="chrome",
-                        headless=False,  # Sempre visível para login
-                        locale="pt-BR",
-                        timezone_id="America/Sao_Paulo",
-                        color_scheme="light",
-                        args=[
-                            "--disable-blink-features=AutomationControlled",
-                            "--disable-infobars",
-                        ],
-                    )
-                    page = context.pages[0] if context.pages else context.new_page()
-                    page.goto("https://www.google.com")
-                    
-                    # Fica aguardando o usuário fechar o navegador manualmente
-                    try:
-                        page.wait_for_event("close", timeout=0)
-                    except Exception:
-                        pass
-                    
-                    context.close()
+                sistema = platform.system()
+                cmd = []
+                # Flag para habilitar o controle do Playwright no navegador existente
+                flags = ["--remote-debugging-port=9222", "https://www.google.com"]
+                
+                if sistema == "Windows":
+                    cmd = ["start", "chrome"] + flags
+                    subprocess.run(" ".join(cmd), shell=True)
+                elif sistema == "Darwin":
+                    cmd = ["open", "-a", "Google Chrome", "--args"] + flags
+                    subprocess.Popen(cmd)
+                else: # Linux
+                    # Tenta os executáveis comuns
+                    chrome_bin = shutil.which("google-chrome") or shutil.which("chromium-browser") or shutil.which("chromium")
+                    if chrome_bin:
+                        cmd = [chrome_bin] + flags
+                        # stdout e stderr pra DEVNULL para não travar
+                        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    else:
+                        messagebox.showerror("Erro", "Chrome/Chromium não encontrado no sistema.")
+                        
+                self.root.after(0, lambda: self.status_var.set("Navegador aberto. Faça o login e pode Iniciar a Pesquisa."))
             except Exception as e:
-                pass
-            finally:
-                self.root.after(0, lambda: self.status_var.set("Navegador fechado. Pronto para extrair."))
-                self.root.after(0, lambda: self.start_btn.config(state=tk.NORMAL))
-                self.root.after(0, lambda: self.login_btn.config(state=tk.NORMAL))
-
+                self.root.after(0, lambda: self.status_var.set(f"Erro ao abrir navegador: {e}"))
+        
         threading.Thread(target=run_login, daemon=True).start()
 
     def _set_preset(self, url_pattern):
@@ -338,33 +332,45 @@ class EcommerceScraperApp:
 
         try:
             with sync_playwright() as p:
-                # Usar o perfil real do Chrome (com contas logadas)
-                profile_path = get_temp_profile_path()
+                # Verifica se a porta 9222 está aberta (navegador já aberto pelo botão de login)
+                cdp_port_open = False
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(1)
+                    if s.connect_ex(('127.0.0.1', 9222)) == 0:
+                        cdp_port_open = True
 
-                if profile_path:
-                    self.status_var.set("Abrindo Chrome com seu perfil...")
-                    context = p.chromium.launch_persistent_context(
-                        profile_path,
-                        channel="chrome",
-                        headless=headless,
-                        locale="pt-BR",
-                        timezone_id="America/Sao_Paulo",
-                        color_scheme="light",
-                        args=[
-                            "--disable-blink-features=AutomationControlled",
-                            "--disable-infobars",
-                        ],
-                    )
+                if cdp_port_open:
+                    self.status_var.set("Conectando ao navegador já aberto...")
+                    browser_or_context = p.chromium.connect_over_cdp("http://localhost:9222")
+                    context = browser_or_context.contexts[0] if browser_or_context.contexts else browser_or_context
+                    is_connected = True
                 else:
-                    self.status_var.set("Perfil não encontrado, executando em modo limpo...")
-                    context = p.chromium.launch_persistent_context(
-                        "",
-                        channel="chrome",
-                        headless=headless,
-                        locale="pt-BR",
-                        timezone_id="America/Sao_Paulo",
-                        color_scheme="light",
-                    )
+                    is_connected = False
+                    profile_path = get_temp_profile_path()
+                    if profile_path:
+                        self.status_var.set("Abrindo Chrome com seu perfil...")
+                        context = p.chromium.launch_persistent_context(
+                            profile_path,
+                            channel="chrome",
+                            headless=headless,
+                            locale="pt-BR",
+                            timezone_id="America/Sao_Paulo",
+                            color_scheme="light",
+                            args=[
+                                "--disable-blink-features=AutomationControlled",
+                                "--disable-infobars",
+                            ],
+                        )
+                    else:
+                        self.status_var.set("Perfil não encontrado, executando em modo limpo...")
+                        context = p.chromium.launch_persistent_context(
+                            "",
+                            channel="chrome",
+                            headless=headless,
+                            locale="pt-BR",
+                            timezone_id="America/Sao_Paulo",
+                            color_scheme="light",
+                        )
 
                 page = context.pages[0] if context.pages else context.new_page()
 
@@ -635,7 +641,14 @@ class EcommerceScraperApp:
                 human_mouse_move(page)
                 human_delay(0.5, 1.0)
 
-                context.close()
+                if is_connected:
+                    page.close()
+                    try:
+                        browser_or_context.close()
+                    except Exception:
+                        pass
+                else:
+                    context.close()
 
         except Exception as e:
             self.status_var.set(f"Erro ao extrair: {str(e)}")
