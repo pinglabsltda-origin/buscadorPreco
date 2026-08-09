@@ -8,6 +8,9 @@ import time
 import random
 import webbrowser
 import os
+import sys
+import platform
+import shutil
 import re
 from datetime import datetime
 
@@ -62,49 +65,58 @@ def human_mouse_move(page):
         human_delay(0.2, 0.7)
 
 
-def create_stealth_context(browser):
-    """Cria um contexto de navegador que parece um usuário real."""
-    # Lista de user agents comuns e recentes
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    ]
-    # Resoluções comuns de tela
-    viewports = [
-        {"width": 1920, "height": 1080},
-        {"width": 1366, "height": 768},
-        {"width": 1536, "height": 864},
-        {"width": 1440, "height": 900},
-    ]
-    vp = random.choice(viewports)
-    context = browser.new_context(
-        user_agent=random.choice(user_agents),
-        viewport=vp,
-        locale="pt-BR",
-        timezone_id="America/Sao_Paulo",
-        geolocation={"latitude": -23.5505, "longitude": -46.6333},
-        permissions=["geolocation"],
-        color_scheme="light",
-        java_script_enabled=True,
-    )
-    # Injeta scripts anti-detecção em todas as páginas do contexto
-    context.add_init_script("""
-        // Remove a flag webdriver
-        Object.defineProperty(navigator, 'webdriver', { get: () => false });
-        // Faz navigator.plugins parecer real
-        Object.defineProperty(navigator, 'plugins', {
-            get: () => [1, 2, 3, 4, 5]
-        });
-        // Faz navigator.languages parecer real
-        Object.defineProperty(navigator, 'languages', {
-            get: () => ['pt-BR', 'pt', 'en-US', 'en']
-        });
-        // Chrome runtime fake
-        window.chrome = { runtime: {} };
-    """)
-    return context
+def get_chrome_profile_path():
+    """Detecta o caminho do perfil do Chrome/Chromium de acordo com o SO."""
+    sistema = platform.system()
+    home = os.path.expanduser("~")
+
+    if sistema == "Windows":
+        paths = [
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "User Data"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Chromium", "User Data"),
+        ]
+    elif sistema == "Darwin":  # macOS
+        paths = [
+            os.path.join(home, "Library", "Application Support", "Google", "Chrome"),
+            os.path.join(home, "Library", "Application Support", "Chromium"),
+        ]
+    else:  # Linux
+        paths = [
+            os.path.join(home, ".config", "google-chrome"),
+            os.path.join(home, ".config", "chromium"),
+        ]
+
+    for p in paths:
+        if os.path.isdir(p):
+            return p
+    return None
+
+
+def get_temp_profile_path():
+    """Cria uma cópia temporária do perfil do Chrome para não conflitar com o Chrome aberto."""
+    original = get_chrome_profile_path()
+    if not original:
+        return None
+
+    # Diretório temporário dentro do projeto
+    temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".chrome_profile_temp")
+
+    # Copiar apenas os arquivos essenciais (cookies, login, etc)
+    essential_files = ["Default", "Local State", "Profile 1"]
+    os.makedirs(temp_dir, exist_ok=True)
+
+    for item in essential_files:
+        src = os.path.join(original, item)
+        dst = os.path.join(temp_dir, item)
+        if os.path.exists(src) and not os.path.exists(dst):
+            try:
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(src, dst)
+            except Exception:
+                pass
+    return temp_dir
 
 
 class EcommerceScraperApp:
@@ -285,12 +297,35 @@ class EcommerceScraperApp:
 
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch(
-                    channel="chrome",
-                    headless=headless,
-                )
-                context = create_stealth_context(browser)
-                page = context.new_page()
+                # Usar o perfil real do Chrome (com contas logadas)
+                profile_path = get_temp_profile_path()
+
+                if profile_path:
+                    self.status_var.set("Abrindo Chrome com seu perfil real...")
+                    context = p.chromium.launch_persistent_context(
+                        profile_path,
+                        channel="chrome",
+                        headless=headless,
+                        locale="pt-BR",
+                        timezone_id="America/Sao_Paulo",
+                        color_scheme="light",
+                        args=[
+                            "--disable-blink-features=AutomationControlled",
+                            "--disable-infobars",
+                        ],
+                    )
+                else:
+                    self.status_var.set("Perfil do Chrome não encontrado, abrindo novo...")
+                    context = p.chromium.launch_persistent_context(
+                        "",
+                        channel="chrome",
+                        headless=headless,
+                        locale="pt-BR",
+                        timezone_id="America/Sao_Paulo",
+                        color_scheme="light",
+                    )
+
+                page = context.pages[0] if context.pages else context.new_page()
 
                 # ── FASE 1: Abrir página inicial (como um humano abrindo o navegador) ──
                 self.status_var.set("Navegando até a página de busca...")
@@ -559,7 +594,7 @@ class EcommerceScraperApp:
                 human_mouse_move(page)
                 human_delay(0.5, 1.0)
 
-                browser.close()
+                context.close()
 
         except Exception as e:
             self.status_var.set(f"Erro ao extrair: {str(e)}")
